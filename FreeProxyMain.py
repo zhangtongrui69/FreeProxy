@@ -117,6 +117,11 @@ if __name__ == '__main__':
 	print('all thread quit. Process done.')
 	for a in update_array:
 		print(a)
+	fobj = open('proxylist.txt', 'w')
+	for a in update_array:
+		s = str(a)+'\n'
+		fobj.write(s)
+	fobj.close()
 
 '''
 	tables = soup('table')
