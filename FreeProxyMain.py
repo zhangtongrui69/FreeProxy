@@ -2,14 +2,16 @@ import queue
 from selenium import webdriver
 import urllib
 import time
-import random
-from bs4 import BeautifulSoup
+import threading
+import queue
+#import random
+#from bs4 import BeautifulSoup
 
 import bs4
 import codecs
 
 target_url="http://www.google.com/"   # 验证代理的时候通过代理访问这个地址
-target_string=b'Google Search'               # 如果返回的html中包含这个字符串，
+target_string='Google Search'               # 如果返回的html中包含这个字符串，
 target_timeout=30                    # 并且响应时间小于 target_timeout 秒
 									 #那么我们就认为这个代理是有效的
 
@@ -17,47 +19,65 @@ check_in_one_call=1  # 本次程序运行时 最多检查的代理个数
 
 update_array=[]         # 这个数组保存将要更新的代理的数据
 
+q = queue.Queue()
 
-def check_one_proxy(ip,port):
-	global update_array
-	global check_in_one_call
-	global target_url,target_string,target_timeout
+class thread_check_one_proxy(threading.Thread):
+	def __init__(self, index):
+		threading.Thread.__init__(self)
+		self.index = index
+		proxydata = ()
+	def check_one_proxy(self, ip,port):
+		global update_array
+		global check_in_one_call
+		global target_url,target_string,target_timeout
 
-	url=target_url
-	checkstr=target_string
-	timeout=target_timeout
-	ip=ip.strip()
-	proxy=ip+':'+str(port)
-	proxies = {'http':'http://'+proxy+'/'}
-	opener = urllib.request.FancyURLopener(proxies)
-	opener.addheaders = [
-		('User-agent','Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)')
-		]
-	t1=time.time()
+		print('thread '+str(self.index)+': processing '+str(ip)+':'+str(port))
+		url=target_url
+		checkstr=target_string
+		timeout=target_timeout
+		ip=ip.strip()
+		proxy=ip+':'+str(port)
+		proxies = {'http':'http://'+proxy+'/'}
+		opener = urllib.request.FancyURLopener(proxies)
+		opener.addheaders = [
+			('User-agent','Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)')
+			]
+		t1=time.time()
 
-	if (url.find("?")==-1):
-		pass
-#		url=url+'?rnd='+str(random.random())
-	else:
-		pass
-#		url=url+'&rnd='+str(random.random())
+		if (url.find("?")==-1):
+			pass
+	#		url=url+'?rnd='+str(random.random())
+		else:
+			pass
+	#		url=url+'&rnd='+str(random.random())
 
-	try:
-		f = opener.open(url)
-		s= f.read()
-		pos=s.find(checkstr)
-	except Exception as ee:
-		print(ee)
-		pos=-1
-		pass
-	t2=time.time()
-	timeused=t2-t1
-	if (timeused<timeout and pos>0):
-		active=1
-	else:
-		active=0
-	update_array.append([ip,port,active,timeused])
-	print(len(update_array),' status: ',active," ",ip,':',port,'--',int(timeused))
+		try:
+			f = opener.open(url)
+			s= str(f.read())
+			pos=s.find(checkstr)
+		except Exception as ee:
+			print('thread ', self.index,':', ee)
+			pos=-1
+			pass
+		t2=time.time()
+		timeused=t2-t1
+		if (timeused<timeout and pos>0):
+			active=1
+		else:
+			active=0
+		update_array.append([active,ip,port,timeused])
+		print('thread ',(self.index),' ',len(update_array),' active:: ',active," ",ip,':',port,'--',int(timeused))
+	def run(self):
+		while True:
+			try:
+				proxydata = q.get(False)
+				self.check_one_proxy(proxydata[0], proxydata[1])
+			except queue.Empty:
+				print(self.index,': quit')
+				break
+			except Exception as ee:
+				print(self.index,': Exception ',ee)
+				break
 
 
 
@@ -81,11 +101,23 @@ if __name__ == '__main__':
 			elif idx==1:
 				fobj.write(td.text+'\n')
 				port = int(td.text)
-				check_one_proxy(ip, port)
+				a = (ip, port)
+				q.put(a)
 			else:
 				break
 	fobj.close()
 	driver.quit()
+	threadNum = 10
+	t = []
+	for i in range(threadNum):
+		t.append(thread_check_one_proxy(i))
+		t[i].start()
+	for i in range(threadNum):
+		t[i].join()
+	print('all thread quit. Process done.')
+	for a in update_array:
+		print(a)
+
 '''
 	tables = soup('table')
 	s1 = ''
