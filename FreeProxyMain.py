@@ -15,11 +15,8 @@ target_string='Google Search'               # 如果返回的html中包含这个
 target_timeout=30                    # 并且响应时间小于 target_timeout 秒
 									 #那么我们就认为这个代理是有效的
 
-check_in_one_call=1  # 本次程序运行时 最多检查的代理个数
-
-update_array=[]         # 这个数组保存将要更新的代理的数据
-
 q = queue.Queue()
+qout = queue.Queue()
 
 class thread_check_one_proxy(threading.Thread):
 	def __init__(self, index):
@@ -27,8 +24,6 @@ class thread_check_one_proxy(threading.Thread):
 		self.index = index
 		proxydata = ()
 	def check_one_proxy(self, ip,port):
-		global update_array
-		global check_in_one_call
 		global target_url,target_string,target_timeout
 
 		print('thread '+str(self.index)+': processing '+str(ip)+':'+str(port))
@@ -65,8 +60,8 @@ class thread_check_one_proxy(threading.Thread):
 			active=1
 		else:
 			active=0
-		update_array.append([active,ip,port,timeused])
-		print('thread ',(self.index),' ',len(update_array),' active:: ',active," ",ip,':',port,'--',int(timeused))
+		qout.put([active,ip,port,timeused])
+		print('thread ',(self.index),' ',qout.qsize(),' active:: ',active," ",ip,':',port,'--',int(timeused))
 	def run(self):
 		while True:
 			try:
@@ -114,15 +109,18 @@ if __name__ == '__main__':
 		t[i].start()
 	for i in range(threadNum):
 		t[i].join()
-	print('all thread quit. Process done.')
-	for a in update_array:
-		print(a)
 	fobj = open('proxylist.txt', 'w')
-	for a in update_array:
-		s = str(a)+'\n'
-		fobj.write(s)
+	while True:
+		try:
+			a = qout.get(False)
+			print(a)
+			if(a[0]==1):
+				s = str(a) + '\n'
+				fobj.write(s)
+		except queue.Empty:
+			break
 	fobj.close()
-
+	print('process closed')
 '''
 	tables = soup('table')
 	s1 = ''
