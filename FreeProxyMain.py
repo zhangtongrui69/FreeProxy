@@ -7,13 +7,14 @@ import queue
 #import random
 #from bs4 import BeautifulSoup
 
-import bs4
-import codecs
+#import bs4
+#import codecs
 
-target_url="http://www.google.com/"   # 验证代理的时候通过代理访问这个地址
-target_string='Google Search'               # 如果返回的html中包含这个字符串，
-target_timeout=30                    # 并且响应时间小于 target_timeout 秒
-									 #那么我们就认为这个代理是有效的
+target_url="http://www.google.com/"  # visit this website while verify the proxy
+target_string='Google Search'		# the returned html text should contain this string
+target_timeout=30                   # the response time should be less than target_timeout seconds
+									# then we consider this is a valid proxy
+
 
 q = queue.Queue()
 qout = queue.Queue()
