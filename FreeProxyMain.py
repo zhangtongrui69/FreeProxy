@@ -5,14 +5,16 @@ import time
 import threading
 import queue
 #import random
-#from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 
 #import bs4
 #import codecs
 
-target_url="http://www.google.com/"  # visit this website while verify the proxy
-target_string='Google Search'		# the returned html text should contain this string
-target_timeout=30                   # the response time should be less than target_timeout seconds
+#target_url="http://www.google.com/"  # visit this website while verify the proxy
+#target_string='Google Search'		# the returned html text should contain this string
+target_url = "http://www.baidu.com/"  # visit this website while verify the proxy
+target_string = '030173'		# the returned html text should contain this string
+target_timeout = 30                   # the response time should be less than target_timeout seconds
 									# then we consider this is a valid proxy
 
 
@@ -76,8 +78,7 @@ class thread_check_one_proxy(threading.Thread):
 				break
 
 
-
-if __name__ == '__main__':
+def generateProxyListFromProxynova():
 	driver = webdriver.Chrome()
 	driver.get('http://www.proxynova.com/proxy-server-list/')
 
@@ -88,14 +89,14 @@ if __name__ == '__main__':
 		ip = ''
 		port = 0
 		for idx, td in enumerate(tds):
-			if idx==0:
-				if(len(td.text)>0):
-					fobj.write(td.text+':')
+			if idx == 0:
+				if (len(td.text) > 0):
+					fobj.write(td.text + ':')
 					ip = td.text
 				else:
 					break
-			elif idx==1:
-				fobj.write(td.text+'\n')
+			elif idx == 1:
+				fobj.write(td.text + '\n')
 				port = int(td.text)
 				a = (ip, port)
 				q.put(a)
@@ -103,6 +104,34 @@ if __name__ == '__main__':
 				break
 	fobj.close()
 	driver.quit()
+
+def generateProxyListFromFreeproxylists():
+	driver = webdriver.Chrome()
+	driver.get('http://www.freeproxylists.net/zh/?c=CN&pt=&pr=&a%5B%5D=0&a%5B%5D=1&a%5B%5D=2&u=0')
+	html = driver.find_element_by_class_name('DataGrid')
+
+	bs = BeautifulSoup(html.text, 'lxml')
+	trs = bs.find_all('tr')
+	for tr in trs:
+		tds = tr.findChildren('td')
+		ip = ''
+		port = 0
+		for idx, td in enumerate(tds):
+			if idx == 0:
+				if td.text == 'IP地址':
+					break
+				a = bs.findChild('a')
+				ip = a.text
+			elif idx == 1:
+				port = int(td.text)
+				a = (ip, port)
+				q.put(a)
+			else:
+				break
+	driver.quit()
+
+if __name__ == '__main__':
+	generateProxyListFromFreeproxylists()
 	threadNum = 10
 	t = []
 	for i in range(threadNum):
