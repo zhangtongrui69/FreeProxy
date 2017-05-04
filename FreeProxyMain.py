@@ -108,37 +108,37 @@ def generateProxyListFromProxynova():
 def generateProxyListFromFreeproxylists():
 	driver = webdriver.Chrome()
 	driver.get('http://www.freeproxylists.net/zh/?c=CN&pt=&pr=&a%5B%5D=0&a%5B%5D=1&a%5B%5D=2&u=0')
-	html = driver.find_element_by_class_name('DataGrid')
+	t = driver.find_element_by_class_name('DataGrid')
 
-	bs = BeautifulSoup(html.text, 'lxml')
-	trs = bs.find_all('tr')
+	trs = t.find_elements_by_tag_name('tr')
 	for tr in trs:
-		tds = tr.findChildren('td')
+		tds = tr.find_elements_by_tag_name('td')
 		ip = ''
 		port = 0
-		for idx, td in enumerate(tds):
-			if idx == 0:
-				if td.text == 'IP地址':
+		if len(tds)==10:
+			for idx, td in enumerate(tds):
+				if idx == 0:
+					lk = td.find_element_by_tag_name('a')
+					if lk.text == 'IP地址':
+						break
+					ip = lk.text
+				elif idx == 1:
+					port = int(td.text)
+					a = (ip, port)
+					q.put(a)
+				else:
 					break
-				a = bs.findChild('a')
-				ip = a.text
-			elif idx == 1:
-				port = int(td.text)
-				a = (ip, port)
-				q.put(a)
-			else:
-				break
 	driver.quit()
 
 if __name__ == '__main__':
 	generateProxyListFromFreeproxylists()
-	threadNum = 10
+	threadNum = 50
 	t = []
 	for i in range(threadNum):
 		t.append(thread_check_one_proxy(i))
 		t[i].start()
 	for i in range(threadNum):
-		t[i].join()
+		t[i].join(30)
 	fobj = open('proxylist.txt', 'w')
 	while True:
 		try:
@@ -151,6 +151,7 @@ if __name__ == '__main__':
 			break
 	fobj.close()
 	print('process closed')
+	quit(0)
 '''
 	tables = soup('table')
 	s1 = ''
