@@ -4,7 +4,7 @@ import urllib
 import time
 import threading
 import queue
-#import random
+import random
 from bs4 import BeautifulSoup
 
 #import bs4
@@ -43,11 +43,9 @@ class thread_check_one_proxy(threading.Thread):
 		t1=time.time()
 
 		if (url.find("?")==-1):
-			pass
-	#		url=url+'?rnd='+str(random.random())
+			url=url+'?rnd='+str(random.random())
 		else:
-			pass
-	#		url=url+'&rnd='+str(random.random())
+			url=url+'&rnd='+str(random.random())
 
 		try:
 			f = opener.open(url)
@@ -124,8 +122,10 @@ def generateProxyListFromFreeproxylists():
 					ip = lk.text
 				elif idx == 1:
 					port = int(td.text)
-					a = (ip, port)
-					q.put(a)
+				elif idx == 2:
+					if td.text == 'HTTPS':
+						a = (ip, port)
+						q.put(a)
 				else:
 					break
 	driver.quit()
