@@ -31,10 +31,10 @@ def isSocks4(host, port, soc):
 	if (len(data) < 2):
 		# Null response
 		return False
-	if data[0] != "\x00":
+	if data[0] != 0:
 		# Bad data
 		return False
-	if data[1] != "\x5A":
+	if data[1] != 0x5A:
 		# Server returned an error
 		return False
 	return True
@@ -46,10 +46,10 @@ def isSocks5(host, port, soc):
 	if (len(data) < 2):
 		# Null response
 		return False
-	if data[0] != "\x05":
+	if data[0] != 0x5:
 		# Not socks5
 		return False
-	if data[1] != "\x00":
+	if data[1] != 0x0:
 		# Requires authentication
 		return False
 	return True
@@ -103,10 +103,10 @@ class ThreadSocksChecker(threading.Thread):
 		if(len(data)<2):
 			# Null response
 			return False
-		if data[0] != "\x00":
+		if data[0] != 0x0:
 			# Bad data
 			return False
-		if data[1] != "\x5A":
+		if data[1] != 0x5A:
 			# Server returned an error
 			return False
 		return True
@@ -117,10 +117,10 @@ class ThreadSocksChecker(threading.Thread):
 		if(len(data)<2):
 			# Null response
 			return False
-		if data[0] != "\x05":
+		if data[0] != 0x5:
 			# Not socks5
 			return False
-		if data[1] != "\x00":
+		if data[1] != 0x0:
 			# Requires authentication
 			return False
 		return True
@@ -139,10 +139,10 @@ class ThreadSocksChecker(threading.Thread):
 			s.connect((host, port))
 			if(self.isSocks4(host, port, s)):
 				s.close()
-				return 5
+				return 4
 			elif(self.isSocks5(host, port, s)):
 				s.close()
-				return 4
+				return 5
 			else:
 				print("Not a SOCKS: " + host +':'+ str(port))
 				s.close()
@@ -161,8 +161,8 @@ class ThreadSocksChecker(threading.Thread):
 				proxy = self.q.get(False)
 				version = self.getSocksVersion(proxy[0], proxy[1])
 				if version == 5 or version == 4:
-					print("Working: " + proxy)
-					socksProxies.put(proxy)
+					print("Working: " + proxy[0], proxy[1])
+					qout.put(proxy)
 			except queue.Empty:
 				print(self.index,': quit')
 				break
@@ -210,7 +210,8 @@ class thread_check_one_proxy(threading.Thread):
 			active=1
 		else:
 			active=0
-		qout.put([active,ip,port,timeused])
+		if active==1:
+			qout.put([ip,port])
 		print('thread ',(self.index),' ',qout.qsize(),' active:: ',active," ",ip,':',port,'--',int(timeused))
 		return
 
@@ -403,14 +404,9 @@ def generateProxyListFromNordVpn():
 	driver.quit()
 
 if __name__ == '__main__':
-	host = '79.106.113.50'
-	port = 1080
-	getSocksVersion(host, port)
-	quit()
-
 	generateProxyListFromSocks_proxy_net()
 	print('total ', q.qsize(), 'items in queue')
-	threadNum = 1
+	threadNum = 50
 	t = []
 	for i in range(threadNum):
 		t.append(ThreadSocksChecker(q, 10, i))
@@ -421,10 +417,9 @@ if __name__ == '__main__':
 	while True:
 		try:
 			a = qout.get(False)
-			print(a)
-			if(a[0]==1):
-				s = str(a) + '\n'
-				fobj.write(s)
+			print(a[0],":",a[1])
+			s = a[0] + ':'+str(a[1])+'\n'
+			fobj.write(s)
 		except queue.Empty:
 			break
 	fobj.close()
